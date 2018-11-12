@@ -1,5 +1,4 @@
-require_relative '../lib/probability'
-
+require 'spec_helper'
 RSpec.describe Probability do
   context 'limits' do
     it 'does not allow numbers larger than 1' do
@@ -45,6 +44,30 @@ RSpec.describe Probability do
   context 'either' do
     it 'is probability of the only 1 of the 2 events happening' do
       expect(Probability.new('0.5').either(Probability.new('0.3'))).to eq Probability.new('0.65')
+    end
+  end
+
+  context 'performance and floating point arithmatic issues' do
+    it 'must be able to do half a million of each operation per second' do
+      operations_per_sec = 500_000
+      expect { Probability.new('0.33').combined_with(Probability.new('0.4')) }.to perform_at_least(operations_per_sec).ips
+
+      expect { Probability.new('0.5').either(Probability.new('0.3')) }.to perform_at_least(operations_per_sec).ips
+
+      expect { Probability.new('0.1').inverse }.to perform_at_least(operations_per_sec).ips
+    end
+
+    it 'handles harder to deal with floating point math for equality and hash' do
+      expect(Probability.new('0.125').combined_with(Probability.new('0.8'))).to eq Probability.new('0.1')
+      expect(Probability.new('0.125').combined_with(Probability.new('0.8')).hash).to eq Probability.new('0.1').hash
+
+      expect(Probability.new('0.001').either(Probability.new('0.021'))).to eq Probability.new('0.021979')
+      expect(Probability.new('0.001').either(Probability.new('0.021')).hash).to eq Probability.new('0.021979').hash
+    end
+
+    it 'is equal if the values are equal to 5 decimal places' do
+      expect(Probability.new('0.12345333444')).to eq Probability.new('0.1234568993')
+      expect(Probability.new('0.12345333444').hash).to eq Probability.new('0.1234568993').hash
     end
   end
 end
